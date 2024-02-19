@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-02-19T10:45:53.137Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" etag="KJjU7IG0anx3MGErssKY" version="23.1.5" type="github" pages="3">
+<mxfile host="app.diagrams.net" modified="2024-02-19T11:52:44.143Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" etag="IWOxPeUjo17xcO3ldUBl" version="23.1.5" type="github" pages="3">
   <diagram name="Activity Diagram" id="5cgKJNd5OM3I3Rc0reRp">
     <mxGraphModel dx="1434" dy="738" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -152,9 +152,6 @@
         </mxCell>
         <mxCell id="CVCdur7km3AYFx5HG1rz-26" value="&lt;b&gt;&lt;font style=&quot;font-size: 20px;&quot;&gt;ACTIVITY DIAGRAM&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
           <mxGeometry x="50" y="30" width="220" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="CVCdur7km3AYFx5HG1rz-27" value="&lt;b style=&quot;font-size: 16px;&quot;&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;Problems:&lt;br&gt;&lt;ul&gt;&lt;li&gt;&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;How can we ensure that the producers are using the specific batch of ingredients as added to the tracing journey?&lt;/font&gt;&lt;/b&gt;&lt;/li&gt;&lt;li&gt;&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;How can we ensure that the farmer is shipping the exact raw ingredients as stated in the PO/ Or from the batch they claim&lt;/font&gt;&lt;/b&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/font&gt;&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-          <mxGeometry x="50" y="527" width="990" height="100" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
