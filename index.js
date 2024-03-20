@@ -38,3 +38,5 @@ app.get("/account", async (req, res) => {
   const test= await web3.eth.getTransactionReceipt('0x06cd658e53d7ba7871cabac84e6dae06c1bbaa0668e18a58baad3cced96936f7')
   console.log(test.gasUsed)
 });
+
+test smth
