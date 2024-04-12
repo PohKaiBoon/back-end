@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-04-12T14:02:14.322Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" etag="dgXfkeQAPbgXzcoNzbGT" version="24.2.3" type="github" pages="3">
+<mxfile host="app.diagrams.net" modified="2024-04-12T14:02:47.405Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" etag="_GOCGpWzBnmOUfvWU8Io" version="24.2.3" type="github" pages="3">
   <diagram name="Activity Diagram" id="5cgKJNd5OM3I3Rc0reRp">
     <mxGraphModel dx="1674" dy="738" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -216,7 +216,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="3JCRTFJhQH8sMDooyktH" name="Page-3">
-    <mxGraphModel dx="1395" dy="615" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1969" dy="868" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -305,6 +305,30 @@
         </mxCell>
         <mxCell id="XZCOACGHV91CFAofGC7m-6" value="&lt;div&gt;&lt;b&gt;Calls API to get traceability&amp;nbsp;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;information from&amp;nbsp;&lt;/b&gt;&lt;b style=&quot;background-color: initial;&quot;&gt;IOTA node through&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;background-color: initial;&quot;&gt;QR Code&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
           <mxGeometry x="727" y="379" width="230" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-8" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://upload.wikimedia.org/wikipedia/commons/a/ad/Iota_logo.png;" vertex="1" parent="1">
+          <mxGeometry x="470" y="553.35" width="140" height="46.9" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="XZCOACGHV91CFAofGC7m-10" target="XZCOACGHV91CFAofGC7m-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-10" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://icon-library.com/images/raspberry-pi-icon/raspberry-pi-icon-20.jpg;" vertex="1" parent="1">
+          <mxGeometry x="486.23" y="635.75" width="107.54" height="72.5" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-11" value="&lt;b&gt;RPi sends sensor data &lt;br&gt;through IOTA JS Client Library to own node&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="405" y="707" width="270" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-16" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://upload.wikimedia.org/wikipedia/commons/a/ad/Iota_logo.png;" vertex="1" parent="1">
+          <mxGeometry x="755" y="553.35" width="140" height="46.9" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="XZCOACGHV91CFAofGC7m-18" target="XZCOACGHV91CFAofGC7m-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-18" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://icon-library.com/images/raspberry-pi-icon/raspberry-pi-icon-20.jpg;" vertex="1" parent="1">
+          <mxGeometry x="771.23" y="635.75" width="107.54" height="72.5" as="geometry" />
+        </mxCell>
+        <mxCell id="XZCOACGHV91CFAofGC7m-19" value="&lt;b&gt;RPi sends sensor data &lt;br&gt;through IOTA JS Client Library to own node&lt;/b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="690" y="707" width="270" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
