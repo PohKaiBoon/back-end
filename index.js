@@ -1,19 +1,15 @@
 const { Client, initLogger } = require('@iota/sdk');
+const { checkHealth } = require('./utils/utils');
+require('dotenv').config()
 
-async function run() {
-    initLogger();
+initLogger();
 
-    const client = new Client({
-        nodes: ['https://api.testnet.shimmer.network'],
-        localPow: true,
-    });
+const client = new Client({
+  nodes: [process.env.NODE_URL],
+  localPow: true,
+});
 
-    try {
-        const nodeInfo = await client.getInfo();
-        console.log('Node info: ', nodeInfo);
-    } catch (error) {
-        console.error('Error: ', error);
-    }
-}
+checkHealth(client);
 
-run().then(() => process.exit());
+
+
