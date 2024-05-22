@@ -6,21 +6,27 @@ const {
   TaggedDataPayload,
   Wallet,
   CoinType,
+  PayloadType,
 } = require("@iota/sdk");
 const { checkHealth } = require("./utils/utils");
 require("dotenv").config({ path: ".env" });
-
-initLogger();
+const fs = require("fs");
+const path = require("path");
 
 const client = new Client({
   nodes: [process.env.NODE_URL],
   localPow: true,
 });
 
-const alias = "Wine Processor";
+client
 
-// checkHealth(client);
-// createWallet("Wine Processor").then(() => process.exit());
+initLogger();
+preChecks(client);
+
+async function preChecks(client) {
+  await checkHealth(client);
+  await checkIfWalletExists();
+}
 
 async function run() {
   for (const envVar of ["NODE_URL", "EXPLORER_URL"]) {
@@ -62,6 +68,19 @@ async function run() {
     }
   } catch (error) {
     console.error("Error: ", error);
+  }
+}
+
+async function checkIfWalletExists() {
+  if (!"WALLET_DB_PATH" in process.env) return false;
+
+  const directoryPath = path.join(__dirname, process.env.WALLET_DB_PATH);
+
+  // Check if the directory exists
+  if (fs.existsSync(directoryPath)) {
+    console.log("Wallet found, not creating new wallet");
+  } else {
+    console.log("Directory does not exist, creating wallet based on ENV file wallet name");
   }
 }
 
@@ -111,7 +130,6 @@ async function createWallet(alias) {
 
 // This example sends a micro transaction
 async function sendMicroTransaction(alias) {
-  initLogger();
   try {
     for (const envVar of [
       "WALLET_DB_PATH",
@@ -133,14 +151,21 @@ async function sendMicroTransaction(alias) {
 
     // To sign a transaction we need to unlock stronghold.
     await wallet.setStrongholdPassword(process.env.STRONGHOLD_PASSWORD);
-
     // Replace with the address of your choice!
-    const address =
-      "rms1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluaw60xu";
-    const amount = BigInt(1);
+    const address = (await account.generateEd25519Addresses(1))[0].address;
+    console.log("Address to be sent", address);
+    const balance = await account.getBalance();
+    console.log("Balance", balance);
 
-    const transaction = await account.send(amount, address, {
+    const options = {
+      tag: utf8ToHex("Hello"),
+      data: utf8ToHex("Test"),
+      type: PayloadType.TaggedData,
+    };
+
+    const transaction = await account.send(BigInt(1), address, {
       allowMicroAmount: true,
+      taggedDataPayload: options,
     });
 
     console.log(`Transaction sent: ${transaction.transactionId}`);
@@ -155,4 +180,67 @@ async function sendMicroTransaction(alias) {
   }
 }
 
-sendMicroTransaction().then(() => process.exit());
+// sendMicroTransaction("bob").then(() => process.exit());
+
+async function viewAllTransactions(alias) {
+  try {
+    for (const envVar of [
+      "WALLET_DB_PATH",
+      "STRONGHOLD_PASSWORD",
+      "EXPLORER_URL",
+    ]) {
+      if (!(envVar in process.env)) {
+        throw new Error(`.env ${envVar} is undefined, see .env.example`);
+      }
+    }
+
+    const wallet = new Wallet({
+      storagePath: process.env.WALLET_DB_PATH,
+    });
+
+    const account = await wallet.getAccount(alias);
+
+    // await account.sync();
+
+    const transactions = await account.transactions();
+    console.log("Sent transactions:");
+    for (const transaction of transactions)
+      console.log(transaction.transactionId);
+    const balance = await account.getBalance();
+    console.log("Balance", balance);
+  } catch (error) {
+    console.error("Error: ", error);
+  }
+}
+
+// viewAllTransactions("bob").then(() => process.exit());
+
+async function viewBlockDetails(alias) {
+  try {
+    for (const envVar of [
+      "WALLET_DB_PATH",
+      "STRONGHOLD_PASSWORD",
+      "EXPLORER_URL",
+    ]) {
+      if (!(envVar in process.env)) {
+        throw new Error(`.env ${envVar} is undefined, see .env.example`);
+      }
+    }
+
+    const wallet = new Wallet({
+      storagePath: process.env.WALLET_DB_PATH,
+    });
+
+    const account = await wallet.getAccount(alias);
+
+    await account.sync();
+    console.log(await account.sync());
+
+    // const fetchedBlock = await client.getBlock('0x2cd71a3e3ec74723156751f5a2c4160e2efca2baf6ead8587905e18f37dbdafa');
+    // console.log('Block data: ', fetchedBlock);
+  } catch (error) {
+    console.error("Error: ", error);
+  }
+}
+
+// viewBlockDetails("bob").then(() => process.exit());
