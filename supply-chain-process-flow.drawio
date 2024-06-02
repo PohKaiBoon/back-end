@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-06-02T06:20:46.847Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="_Qweiwf10OGaIrw9ZdiB" version="24.4.0" type="github" pages="6">
+<mxfile host="app.diagrams.net" modified="2024-06-02T06:21:32.521Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="gIT-Xosh74pOt0x6ywJy" version="24.4.0" type="github" pages="6">
   <diagram name="Activity Diagram" id="5cgKJNd5OM3I3Rc0reRp">
     <mxGraphModel dx="1674" dy="738" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -489,7 +489,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="n-dYtrmyTAQSVDcvqHVc" name="Page-6">
-    <mxGraphModel dx="1288" dy="568" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1860" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -524,7 +524,7 @@
           <mxGeometry x="978" y="450" width="110" height="30" as="geometry" />
         </mxCell>
         <mxCell id="UbSlnWJTsGPOgBPbQESU-1" value="&lt;ul&gt;&lt;li&gt;Farmers cultivates crops and creates &lt;br&gt;batches of produce once harvested&lt;br&gt;&lt;br&gt;&lt;/li&gt;&lt;li&gt;Each batch is generated with a unique batch&lt;br&gt;ID, includes all detailed traceability information&lt;br&gt;&lt;br&gt;&lt;/li&gt;&lt;li&gt;When producers/processors purchase batches&amp;nbsp;&lt;br&gt;of produces, the batch ID is shared to access&amp;nbsp;&lt;br&gt;and verify the relevant traceability information&lt;br&gt;associated with the relevant batches purchased&lt;/li&gt;&lt;/ul&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="10" y="480" width="320" height="180" as="geometry" />
+          <mxGeometry x="10" y="470" width="320" height="180" as="geometry" />
         </mxCell>
         <mxCell id="UbSlnWJTsGPOgBPbQESU-4" value="&lt;b style=&quot;text-wrap: nowrap;&quot;&gt;Farmer sends harvested&amp;nbsp;&lt;/b&gt;&lt;div style=&quot;text-wrap: nowrap;&quot;&gt;&lt;b&gt;produce&amp;nbsp;&lt;span style=&quot;background-color: initial;&quot;&gt;to &lt;br&gt;producer/processor&lt;/span&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
           <mxGeometry x="256" y="299" width="70" height="70" as="geometry" />
