@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-06-02T06:43:48.459Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="ad-3WVhIg5hgsL8pZuEF" version="24.4.0" type="github" pages="6">
+<mxfile host="app.diagrams.net" modified="2024-06-02T06:44:05.099Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" etag="UVOo2POnc8yAGCavhrXl" version="24.4.0" type="github" pages="6">
   <diagram name="Activity Diagram" id="5cgKJNd5OM3I3Rc0reRp">
     <mxGraphModel dx="1674" dy="738" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -489,7 +489,7 @@
     </mxGraphModel>
   </diagram>
   <diagram id="n-dYtrmyTAQSVDcvqHVc" name="Page-6">
-    <mxGraphModel dx="1304" dy="671" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="1509" dy="777" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -545,7 +545,7 @@
           <mxGeometry x="300" y="470" width="340" height="240" as="geometry" />
         </mxCell>
         <mxCell id="UbSlnWJTsGPOgBPbQESU-12" value="&lt;span style=&quot;text-wrap: nowrap;&quot;&gt;&lt;b&gt;Producer sends&amp;nbsp;&lt;br&gt;final product to&amp;nbsp;&lt;br&gt;retailers&lt;/b&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="540" y="299" width="70" height="70" as="geometry" />
+          <mxGeometry x="530" y="299" width="100" height="70" as="geometry" />
         </mxCell>
         <mxCell id="UbSlnWJTsGPOgBPbQESU-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.342;entryY=0.703;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="6HeAgYbWGc1sXW-V2T5i-2" target="zc5TGyL_J_KmwTMNtLBX-2">
           <mxGeometry relative="1" as="geometry" />
