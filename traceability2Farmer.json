@@ -1,0 +1,55 @@
+{
+  "batchId": "BATCH123456",
+  "product": "Organic Apples",
+  "deliveryDate": "2024-05-30",
+  "logistics": {
+    "company": "Fresh Deliveries Inc.",
+    "contact": "support@freshdeliveries.com",
+    "trackingNumber": "TRACK123456789"
+  },
+  "shipmentDetails": {
+    "departure": {
+      "date": "2024-05-29",
+      "location": {
+        "latitude": "37.7749",
+        "longitude": "-122.4194",
+        "address": "123 Apple Lane, Fruitville, CA"
+      }
+    },
+    "arrival": {
+      "date": "2024-05-30",
+      "location": {
+        "latitude": "34.0522",
+        "longitude": "-118.2437",
+        "address": "789 Market Street, Los Angeles, CA"
+      }
+    },
+    "transportation": {
+      "type": "Refrigerated Truck",
+      "vehicleId": "TRUCK987654",
+      "driver": {
+        "name": "Jane Smith",
+        "contact": "jane.smith@freshdeliveries.com"
+      }
+    }
+  },
+  "conditions": {
+    "temperature": {
+      "unit": "Celsius",
+      "min": "2",
+      "max": "8"
+    },
+    "humidity": {
+      "unit": "Percentage",
+      "min": "85",
+      "max": "95"
+    }
+  },
+  "status": "Delivered",
+  "receiver": {
+    "name": "Healthy Market",
+    "contact": "contact@healthymarket.com",
+    "receivedBy": "Michael Johnson",
+    "notes": "Received in good condition."
+  }
+}

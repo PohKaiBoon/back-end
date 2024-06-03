@@ -1,0 +1,39 @@
+{
+    "batchId": "snd1qpjpcsg2mdfc49pv78y8lf8vzzcjjsvfetumm6dwdrjp55g6h4vqw78yg97",
+    "product": "Organic Apples",
+    "harvestDate": "2024-05-28",
+    "farm": {
+      "name": "Green Valley Farms",
+      "location": {
+        "latitude": "37.7749",
+        "longitude": "-122.4194",
+        "address": "123 Apple Lane, Fruitville, CA"
+      },
+      "farmer": {
+        "name": "John Doe",
+        "contact": "john.doe@greenvalleyfarms.com"
+      }
+    },
+    "harvestDetails": {
+      "method": "Handpicked",
+      "quality": "Grade A",
+      "quantity": "500 kg"
+    },
+    "certifications": [
+      {
+        "name": "USDA Organic",
+        "certificationDate": "2023-05-01",
+        "certifyingAgency": "USDA"
+      }
+    ],
+    "processingDetails": {
+      "cleaning": {
+        "method": "Water Rinse",
+        "date": "2024-05-28"
+      },
+      "sorting": {
+        "method": "Size and Color Sorting",
+        "date": "2024-05-28"
+      }
+    }
+  }

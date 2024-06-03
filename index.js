@@ -273,9 +273,13 @@ async function addTracebility() {
     const basicOutput = await client.buildBasicOutput(outputs);
     console.log(basicOutput);
 
-    const transaction = await account.send(BigInt(1), "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q", {
-      allowMicroAmount: true,
-    });
+    const transaction = await account.send(
+      BigInt(1),
+      "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q",
+      {
+        allowMicroAmount: true,
+      }
+    );
 
     console.log(`Transaction sent: ${transaction.transactionId}`);
 
@@ -307,17 +311,3 @@ async function addTracebility() {
     console.error("Error: ", error);
   }
 }
-
-// addTracebility();
-async function name() {
-  const outputIdsResponse = await client.basicOutputIds([
-    {
-      address:
-        "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q",
-    },
-  ]);
-
-  console.log(outputIdsResponse);
-}
-
-name();
