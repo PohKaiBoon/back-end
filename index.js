@@ -7,6 +7,10 @@ const {
   Wallet,
   CoinType,
   PayloadType,
+  Utils,
+  AddressUnlockCondition,
+  TimelockUnlockCondition,
+  Ed25519Address,
 } = require("@iota/sdk");
 const { checkHealth } = require("./utils/utils");
 require("dotenv").config({ path: ".env" });
@@ -18,57 +22,12 @@ const client = new Client({
   localPow: true,
 });
 
-client
-
 initLogger();
-preChecks(client);
+// preChecks(client);
 
 async function preChecks(client) {
   await checkHealth(client);
   await checkIfWalletExists();
-}
-
-async function run() {
-  for (const envVar of ["NODE_URL", "EXPLORER_URL"]) {
-    if (!(envVar in process.env)) {
-      throw new Error(`.env ${envVar} is undefined, see .env.example`);
-    }
-  }
-  const data = {
-    id: 1,
-  };
-
-  const options = {
-    tag: utf8ToHex("Hello"),
-    data: utf8ToHex(JSON.stringify(data)),
-  };
-
-  try {
-    const mnemonic = process.env.MNEMONIC;
-    const secretManager = { mnemonic: mnemonic };
-
-    // Create block with tagged payload
-    const blockIdAndBlock = await client.buildAndPostBlock(
-      secretManager,
-      options
-    );
-
-    console.log(blockIdAndBlock);
-
-    console.log(
-      `Block sent: ${process.env.EXPLORER_URL}/block/${blockIdAndBlock[0]}`
-    );
-
-    const fetchedBlock = await client.getBlock(blockIdAndBlock[0]);
-    console.log("Block data: ", fetchedBlock);
-
-    if (fetchedBlock.payload instanceof TaggedDataPayload) {
-      const payload = fetchedBlock.payload;
-      console.log("Decoded data:", hexToUtf8(payload.data));
-    }
-  } catch (error) {
-    console.error("Error: ", error);
-  }
 }
 
 async function checkIfWalletExists() {
@@ -80,7 +39,9 @@ async function checkIfWalletExists() {
   if (fs.existsSync(directoryPath)) {
     console.log("Wallet found, not creating new wallet");
   } else {
-    console.log("Directory does not exist, creating wallet based on ENV file wallet name");
+    console.log(
+      "Directory does not exist, creating wallet based on ENV file wallet name"
+    );
   }
 }
 
@@ -128,6 +89,8 @@ async function createWallet(alias) {
   }
 }
 
+// createWallet("coordinator")
+
 // This example sends a micro transaction
 async function sendMicroTransaction(alias) {
   try {
@@ -163,6 +126,7 @@ async function sendMicroTransaction(alias) {
       type: PayloadType.TaggedData,
     };
 
+    client.buildAndPostBlock();
     const transaction = await account.send(BigInt(1), address, {
       allowMicroAmount: true,
       taggedDataPayload: options,
@@ -180,7 +144,7 @@ async function sendMicroTransaction(alias) {
   }
 }
 
-// sendMicroTransaction("bob").then(() => process.exit());
+// sendMicroTransaction("coordinator").then(() => process.exit());
 
 async function viewAllTransactions(alias) {
   try {
@@ -227,20 +191,133 @@ async function viewBlockDetails(alias) {
       }
     }
 
-    const wallet = new Wallet({
-      storagePath: process.env.WALLET_DB_PATH,
-    });
+    // const wallet = new Wallet({
+    //   storagePath: process.env.WALLET_DB_PATH,
+    // });
 
-    const account = await wallet.getAccount(alias);
+    // const account = await wallet.getAccount(alias);
 
-    await account.sync();
-    console.log(await account.sync());
+    // await account.sync();
+    // console.log(await account.sync());
 
-    // const fetchedBlock = await client.getBlock('0x2cd71a3e3ec74723156751f5a2c4160e2efca2baf6ead8587905e18f37dbdafa');
-    // console.log('Block data: ', fetchedBlock);
+    const fetchedBlock = await client.getBlock(
+      "0xd52b343304b21ec6d6bd817170e9d02f4b5bdc4d584e6fa30dfdb1d2f92511dc"
+    );
+    const payload = fetchedBlock.payload;
+    console.log(payload.essence.payload);
+    console.log("Decoded data:", hexToUtf8(payload.essence.payload.data));
   } catch (error) {
     console.error("Error: ", error);
   }
 }
 
 // viewBlockDetails("bob").then(() => process.exit());
+
+async function addTracebility() {
+  try {
+    for (const envVar of [
+      "WALLET_DB_PATH",
+      "STRONGHOLD_PASSWORD",
+      "EXPLORER_URL",
+    ]) {
+      if (!(envVar in process.env)) {
+        throw new Error(`.env ${envVar} is undefined, see .env.example`);
+      }
+    }
+
+    const wallet = new Wallet({
+      storagePath: process.env.WALLET_DB_PATH,
+    });
+
+    const account = await wallet.getAccount("coordinator");
+
+    await account.sync();
+
+    // To sign a transaction we need to unlock stronghold.
+    await wallet.setStrongholdPassword(process.env.STRONGHOLD_PASSWORD);
+
+    const address = await account.generateEd25519Addresses(1);
+    console.log(address[0].address);
+
+    // const test = new Ed25519Address(address);
+    // console.log(test);
+
+    // const addressUnlockCondition = new AddressUnlockCondition(test);
+    // console.log(addressUnlockCondition);
+
+    // Create an output with amount 1_000_000 and a timelock of 1 hour
+    // account.sendOutputs({})
+
+    const outputs = {
+      amount: BigInt(224500),
+      unlockConditions: [
+        new AddressUnlockCondition(
+          new Ed25519Address(
+            Utils.bech32ToHex(
+              "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q"
+            )
+          )
+        ),
+      ],
+      features: [
+        {
+          type: 3,
+          tag: utf8ToHex("Test"),
+        },
+        {
+          type: 2,
+          data: utf8ToHex("Test"),
+        },
+      ],
+    };
+    const basicOutput = await client.buildBasicOutput(outputs);
+    console.log(basicOutput);
+
+    const transaction = await account.send(BigInt(1), "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q", {
+      allowMicroAmount: true,
+    });
+
+    console.log(`Transaction sent: ${transaction.transactionId}`);
+
+    const blockId = await account.retryTransactionUntilIncluded(
+      transaction.transactionId
+    );
+
+    console.log(`Block sent: ${process.env.EXPLORER_URL}/block/${blockId}`);
+
+    const block = await client.buildAndPostBlock(
+      { mnemonic: process.env.MNEMONIC },
+      {
+        outputs: [basicOutput],
+        tag: utf8ToHex("Test"),
+        data: utf8ToHex("TEST"),
+      }
+    );
+
+    // console.log(`Transaction sent: ${transaction.transactionId}`);
+
+    // console.log("Waiting until included in block...");
+    // const blockId = await account.retryTransactionUntilIncluded(
+    //   transaction.transactionId
+    // );
+    // console.log(`Block sent: ${process.env.EXPLORER_URL}/block/${blockId}`);
+
+    console.log(`Block sent: ${process.env.EXPLORER_URL}/block/${block[0]}`);
+  } catch (error) {
+    console.error("Error: ", error);
+  }
+}
+
+// addTracebility();
+async function name() {
+  const outputIdsResponse = await client.basicOutputIds([
+    {
+      address:
+        "snd1qzzlrmeerthts5xsphva8qtfjex7j44nl0qn6c9dx2f4xcpxxx43cuxef3q",
+    },
+  ]);
+
+  console.log(outputIdsResponse);
+}
+
+name();

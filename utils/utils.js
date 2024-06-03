@@ -5,6 +5,7 @@ async function checkHealth(client) {
     try {
         const nodeInfo = await client.getInfo();
         console.log('Node info: ', nodeInfo);
+        console.log("Node checked health successfully")
     } catch (error) {
         console.error('Error: ', error);
     }
