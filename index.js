@@ -311,3 +311,22 @@ async function addTracebility() {
     console.error("Error: ", error);
   }
 }
+
+async function checkWallet() {
+  if (!"WALLET_DB_PATH" in process.env)
+    res.status(500).json(errors.generic500Error);
+
+  try {
+    const wallet = new Wallet({
+      storagePath: process.env.WALLET_DB_PATH,
+    });
+
+    const accounts = await wallet.getAccounts();
+    return accounts;
+  } catch (error) {
+    console.log(error);
+    return JSON.parse(error.toString().replace("Error: ", ""))
+  }
+}
+
+// run().then(() => process.exit());
