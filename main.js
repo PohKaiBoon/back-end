@@ -222,7 +222,7 @@ app.post("/api/v1/generateAddress", async (req, res) => {
     // console.log(published.id());
   } catch (error) {
     console.error(error);
-    res.status(500).json(JSON.parse(error.toString().replace("Error: ", "")));
+    res.status(500).json(error);
   }
 });
 
