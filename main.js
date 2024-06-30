@@ -25,6 +25,7 @@ const {
   JwtCredentialValidationOptions,
   EdDSAJwsVerifier,
   Jwt,
+  Resolver,
 } = require("@iota/identity-wasm/node");
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -183,12 +184,12 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
         IotaDID.fromJSON(`did:iota:snd:${id}`)
       );
 
-      if (did.properties().get("harvestDate")) {
+      if (did.properties().get("batchDetails")) {
         const data = {
           address: did.metadataGovernorAddress(),
           dateTimeCreated: did.metadataCreated().toRFC3339(),
           dateTimeUpdated: did.metadataUpdated().toRFC3339(),
-          produceType: did.properties().get("harvestDate").vineyardDetails
+          produceType: did.properties().get("batchDetails").vineyardDetails
             ?.grapeVariety,
         };
         didBatches.push(data);
@@ -238,7 +239,7 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     // Create a new DID document with a placeholder DID.
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
     const document = new IotaDocument(networkHrp);
-    document.setPropertyUnchecked("harvestDate", req.body?.batchDetails);
+    document.setPropertyUnchecked("batchDetails", req.body?.batchDetails);
 
     const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
@@ -274,6 +275,37 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     // console.log(published.id());
   } catch (error) {
     console.error("Error: ", error);
+    res.status(500).json(error);
+  }
+});
+
+// Endpoint that accepts query parameters
+app.get("/api/v1/details", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
+    // Access query parameters
+    const queryParams = req.query.address;
+
+    const alias = await client.aliasOutputIds([
+      {
+        sender: queryParams,
+      },
+    ]);
+
+    if (alias.items[0]) {
+      const didID = Utils.computeAliasId(alias.items[0]);
+      const document = await resolver.resolve(`did:iota:snd:${didID}`);
+      res.json({
+        batchDetails: document.properties().get("batchDetails"),
+        metadata: document.metadata(),
+      });
+    }
+  } catch (error) {
     res.status(500).json(error);
   }
 });
