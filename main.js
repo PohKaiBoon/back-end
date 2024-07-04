@@ -172,6 +172,10 @@ app.post("/api/v1/createWallet", async (req, res) => {
       await tempWallet.getClient()
     ).requestFundsFromFaucet(process.env.FAUCET_URL, address.address);
 
+    console.log(faucetResponse);
+    setTimeout(() => {
+      // Code to be executed after 5 seconds
+    }, 5000);
     const didClient = new IotaIdentityClient(client);
 
     const networkHrp = await didClient.getNetworkHrp();
@@ -381,29 +385,271 @@ app.get("/api/v1/details", async (req, res) => {
 // Update batch details with traceability data
 app.post("/api/v1/addTraceability", async (req, res) => {
   try {
+    // Create an identity for the issuer with one verification method `key-1`.
     const ipfs = await import("kubo-rpc-client");
+
     const ipfsClient = ipfs.create({ url: "http://127.0.0.1:5001" });
+
+    const issuerStorage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
     const didClient = new IotaIdentityClient(client);
 
-    const networkHrp = await didClient.getNetworkHrp();
-    console.log(networkHrp);
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
 
-    console.log("Wallet address Bech32:", req.body?.address);
+    const alias = await client.aliasOutputIds([
+      {
+        sender: req.body.batchAddress,
+      },
+    ]);
 
-    const issuerStorage = new Storage(new JwkMemStore(), new KeyIdMemStore());
-    const did = await didClient.resolveDid(
-      IotaDID.fromJSON(
-        "did:iota:snd:0x7a45389fb236e4888d5437e9abba17883e7a8f24b641f2bd083ec8a40a1bccfe"
-      )
-    );
-    const fragment = await did.generateMethod(
-      issuerStorage,
-      JwkMemStore.ed25519KeyType(),
-      JwsAlgorithm.EdDSA,
-      "#jwk",
-      MethodScope.AssertionMethod()
-    );
+    if (alias.items[0]) {
+      const didID = Utils.computeAliasId(alias.items[0]);
+      const batchDid = await resolver.resolve(`did:iota:snd:${didID}`); // Get the DID document of the batch.
+      const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
+      issuerDid.removeMethod(issuerDid.resolveMethod("#jwk").id());
+
+      const fragment = await issuerDid.generateMethod(
+        issuerStorage,
+        JwkMemStore.ed25519KeyType(),
+        JwsAlgorithm.EdDSA,
+        "#jwk",
+        MethodScope.AssertionMethod()
+      );
+
+      console.log(issuerDid);
+
+      // Create a credential subject indicating the degree earned by Alice, linked to their DID.
+      const subject = {
+        id: batchDid.id(),
+        certificationNumber: "13168",
+        certifiedEntity: {
+          name: "Bonnie House Pty Ltd",
+          address:
+            "273 Collier Rd, Bayswater Western Australia 6053, Australia",
+          facilities: "Unit 3.2 21 South Street, Rydalmere NSW 2116, Australia",
+        },
+        standards: [
+          {
+            standardName: "Australian Certified Organic Standard 2021 v1",
+            scope: [
+              "Contract Processor",
+              "Handler",
+              "Processor",
+              "Exporter",
+              "Food",
+              "Importer",
+              "Independent Contract Processor",
+              "Wholesaler",
+            ],
+            registrationNumber: "39",
+          },
+          {
+            standardName:
+              "Australian National Standard for Organic and Biodynamic Produce 3.8",
+            scope: [
+              "Contract Processor",
+              "Handler",
+              "Processor",
+              "Cosmetics",
+              "Exporter",
+              "Food",
+              "Importer",
+              "Independent Contract Processor",
+              "Wholesaler",
+            ],
+            registrationNumber: "AU-BIO-001",
+          },
+          {
+            standardName: "USDA Organic",
+            scope: "Handling",
+            effectiveDate: "2020-12-04",
+            usdaAnniversaryDate: "2023-11-02",
+          },
+          {
+            standardName:
+              "Australian Certified Organic Standard (EU Equivalent)",
+            scope: "Processed products",
+            effectiveDate: "2023-09-02",
+            registrationNumber: "AU-BIO-107",
+          },
+          {
+            standardName:
+              "Certified to Retained Regulations 834/2007, 889/2008 and 1235/2008 for Exporting Organic Products to Great Britain",
+            scope: "Processed products",
+          },
+        ],
+        authorizedBy: {
+          name: "Kate Allan",
+          title: "General Manager - Certification",
+          signature: "C-12732-2023",
+        },
+      };
+
+      // Create an unsigned `UniversityDegree` credential for Alice
+      const unsignedVc = new Credential({
+        id: "https://www.bonniehouse.com/information/information&information_id=3",
+        type: "OrganicCertificationCredential",
+        issuer: issuerDid.id(),
+        credentialSubject: subject,
+        issuanceDate: new Date().toISOString(),
+        expirationDate: new Date(
+          new Date().getTime() + 31556952000
+        ).toISOString(),
+      });
+
+      // Create signed JWT credential.
+      const credentialJwt = await issuerDid.createCredentialJwt(
+        issuerStorage,
+        fragment,
+        unsignedVc,
+        new JwsSignatureOptions()
+      );
+      console.log(`Credential JWT > ${credentialJwt.toString()}`);
+
+      // call Core API methods
+      const { cid } = await ipfsClient.add(credentialJwt.toJSON());
+      console.log("File added to IPFS with CID:", cid.toString());
+
+      // Add the traceability data to the batch DID.
+      if (
+        !batchDid.properties().get("traceability") ||
+        batchDid.properties().get("traceability").length === 0
+      ) {
+        batchDid.setPropertyUnchecked("traceability", []);
+        const traceability = batchDid.properties().get("traceability");
+        traceability.push({
+          cid: cid.toString(),
+          timestamp: new Date().toISOString(),
+        });
+        batchDid.setPropertyUnchecked("traceability", traceability);
+        batchDid.setMetadataUpdated(new Date().toISOString());
+      } else {
+        const traceability = batchDid.properties().get("traceability");
+        console.log(traceability);
+        traceability.push({
+          cid: cid.toString(),
+          timestamp: new Date().toISOString(),
+        });
+        batchDid.setPropertyUnchecked("traceability", traceability);
+        batchDid.setMetadataUpdated(new Date().toISOString());
+      }
+
+      const updatedAliasOutput = await didClient.updateDidOutput(batchDid);
+      console.log(updatedAliasOutput.getUnlockConditions());
+      // Because the size of the DID document increased, we have to increase the allocated storage deposit.
+      // This increases the deposit amount to the new minimum.
+      const rentStructure = await didClient.getRentStructure();
+
+      aliasOutput = await client.buildAliasOutput({
+        ...updatedAliasOutput,
+        amount: Utils.computeStorageDeposit(updatedAliasOutput, rentStructure),
+        aliasId: updatedAliasOutput.getAliasId(),
+        unlockConditions: updatedAliasOutput.getUnlockConditions(),
+      });
+
+      // Publish the updated batch DID Document
+      const updated = await didClient.publishDidOutput(
+        {
+          stronghold: {
+            password: req.body?.password,
+            snapshotPath: process.env.STRONGHOLD_SNAPSHOT_PATH,
+          },
+        },
+        aliasOutput
+      );
+      console.log(
+        "Updated Batch DID Document Published:",
+        JSON.stringify(updated, null, 2)
+      );
+
+      // Add the traceability data to the actor DID.
+
+      if (
+        !issuerDid.properties().get(req.body.type) ||
+        issuerDid.properties().get(req.body.type).length === 0
+      ) {
+        issuerDid.setPropertyUnchecked(req.body.type, []);
+        const traceability = issuerDid.properties().get(req.body.type);
+        traceability.push({
+          cid: cid.toString(),
+          timestamp: new Date().toISOString(),
+        });
+        issuerDid.setPropertyUnchecked(req.body.type, traceability);
+        issuerDid.setMetadataUpdated(new Date().toISOString());
+      } else {
+        const traceability = issuerDid.properties().get(req.body.type);
+        traceability.push({
+          cid: cid.toString(),
+          timestamp: new Date().toISOString(),
+        });
+        issuerDid.setPropertyUnchecked(req.body.type, traceability);
+        issuerDid.setMetadataUpdated(new Date().toISOString());
+      }
+
+      const updatedIssuerAliasOutput = await didClient.updateDidOutput(
+        issuerDid
+      );
+
+      // Because the size of the DID document increased, we have to increase the allocated storage deposit.
+      // This increases the deposit amount to the new minimum.
+      const issuerRentStructure = await didClient.getRentStructure();
+
+      aliasOutput = await client.buildAliasOutput({
+        ...updatedIssuerAliasOutput,
+        amount: Utils.computeStorageDeposit(
+          updatedIssuerAliasOutput,
+          issuerRentStructure
+        ),
+        aliasId: updatedIssuerAliasOutput.getAliasId(),
+        unlockConditions: updatedIssuerAliasOutput.getUnlockConditions(),
+      });
+
+      // Publish the updated batch DID Document
+      const updatedIssuer = await didClient.publishDidOutput(
+        {
+          stronghold: {
+            password: req.body?.password,
+            snapshotPath: process.env.STRONGHOLD_SNAPSHOT_PATH,
+          },
+        },
+        aliasOutput
+      );
+      console.log(
+        "Updated Batch DID Document Published:",
+        JSON.stringify(updatedIssuer, null, 2)
+      );
+      console.log(issuerDid);
+      // Before sending this credential to the holder the issuer wants to validate that some properties
+      // of the credential satisfy their expectations.
+
+      // Validate the credential's signature, the credential's semantic structure,
+      // check that the issuance date is not in the future and that the expiration date is not in the past.
+      // Note that the validation returns an object containing the decoded credential.
+      // const decoded_credential = new JwtCredentialValidator(
+      //   new EdDSAJwsVerifier()
+      // ).validate(
+      //   credentialJwt,
+      //   issuerDid,
+      //   new JwtCredentialValidationOptions(),
+      //   FailFast.FirstError
+      // );
+
+      // // Since `validate` did not throw any errors we know that the credential was successfully validated.
+      // console.log(`VC successfully validated`);
+
+      // // The issuer is now sure that the credential they are about to issue satisfies their expectations.
+      // // Note that the credential is NOT published to the IOTA Tangle. It is sent and stored off-chain.
+      // console.log(
+      //   `Issued credential: ${JSON.stringify(
+      //     decoded_credential.intoCredential(),
+      //     null,
+      //     2
+      //   )}`
+      // );
+    }
   } catch (error) {
     console.error("Error: ", error);
     res.status(500).json(error);
