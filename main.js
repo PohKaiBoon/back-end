@@ -8,6 +8,8 @@ const {
   UnlockConditionType,
   StateControllerAddressUnlockCondition,
   Ed25519Address,
+  AliasAddress,
+  IssuerFeature,
 } = require("@iota/sdk");
 const {
   Jwk,
@@ -245,23 +247,31 @@ app.get("/api/v1/generateMnemonic", async (req, res) => {
 app.post("/api/v1/getAllBatches", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
-    let listOfDids = [];
     let didBatches = [];
 
-    const account = await wallet.getAccount(req.body?.alias);
-    let alias = await account.sync(); // May want to ensure the account is synced before sending a transaction.
+    const farmerAliasAddress = Utils.aliasIdToBech32(
+      new AliasAddress(
+        IotaDID.fromJSON(req.body?.did).toAliasId()
+      ).getAliasId(),
+      "snd"
+    );
 
-    listOfDids = alias.aliases;
-    // console.log(listOfDids);
+    const alias = await client.aliasOutputIds([
+      {
+        issuer: farmerAliasAddress,
+      },
+    ]);
 
-    for (const id of listOfDids) {
+    for (const id of alias.items) {
+      const didID = Utils.computeAliasId(id);
+      console.log(didID);
       const did = await didClient.resolveDid(
-        IotaDID.fromJSON(`did:iota:snd:${id}`)
+        IotaDID.fromJSON(`did:iota:snd:${didID}`)
       );
 
       if (did.properties().get("batchDetails")) {
         const data = {
-          address: did.metadataGovernorAddress(),
+          address: Utils.aliasIdToBech32(didID, "snd"),
           dateTimeCreated: did.metadataCreated().toRFC3339(),
           dateTimeUpdated: did.metadataUpdated().toRFC3339(),
           produceType: did.properties().get("batchDetails").vineyardDetails
@@ -305,11 +315,12 @@ app.post("/api/v1/generateAddress", async (req, res) => {
 app.post("/api/v1/submitBatch", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
-
     const networkHrp = await didClient.getNetworkHrp();
-    console.log(networkHrp);
+    const rentStructure = await didClient.getRentStructure();
 
-    console.log("Wallet address Bech32:", req.body?.address);
+    const farmerAliasAddress = new AliasAddress(
+      IotaDID.fromJSON(req.body?.did).toAliasId()
+    );
 
     // Create a new DID document with a placeholder DID.
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
@@ -327,11 +338,26 @@ app.post("/api/v1/submitBatch", async (req, res) => {
       MethodScope.VerificationMethod()
     );
 
-    // Construct an Alias Output containing the DID document, with the wallet address
-    // set as both the state controller and governor.
-    const address = Utils.parseBech32Address(req.body?.address);
-    const aliasOutput = await didClient.newDidOutput(address, document);
+    var aliasOutput = await didClient.newDidOutput(
+      farmerAliasAddress,
+      document
+    );
     console.log("Alias Output:", JSON.stringify(aliasOutput, null, 2));
+
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      immutableFeatures: [new IssuerFeature(farmerAliasAddress)],
+      aliasId: aliasOutput.getAliasId(),
+      unlockConditions: aliasOutput.getUnlockConditions(),
+    });
+
+    // Adding the issuer feature means we have to recalculate the required storage deposit.
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      amount: Utils.computeStorageDeposit(aliasOutput, rentStructure),
+      aliasId: aliasOutput.getAliasId(),
+      unlockConditions: aliasOutput.getUnlockConditions(),
+    });
 
     // Publish the Alias Output and get the published DID document.
     const published = await didClient.publishDidOutput(
@@ -366,21 +392,15 @@ app.get("/api/v1/details", async (req, res) => {
     // Access query parameters
     const queryParams = req.query.address;
 
-    const alias = await client.aliasOutputIds([
-      {
-        sender: queryParams,
-      },
-    ]);
-
-    if (alias.items[0]) {
-      const didID = Utils.computeAliasId(alias.items[0]);
-      const document = await resolver.resolve(`did:iota:snd:${didID}`);
-      res.json({
-        batchDetails: document.properties().get("batchDetails"),
-        metadata: document.metadata(),
-      });
-    }
+    const document = await resolver.resolve(
+      `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
+    );
+    res.json({
+      batchDetails: document.properties().get("batchDetails"),
+      metadata: document.metadata(),
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 });
