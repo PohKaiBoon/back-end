@@ -7,6 +7,7 @@ const {
   SecretManager,
   UnlockConditionType,
   StateControllerAddressUnlockCondition,
+  GovernorAddressUnlockCondition,
   Ed25519Address,
   AliasAddress,
   IssuerFeature,
@@ -42,6 +43,7 @@ const cors = require("cors");
 const {
   ensureAddressHasFunds,
   convertToHumanReadable,
+  generateBatchIDWithUUID,
 } = require("./utils/utils");
 
 const app = express();
@@ -270,13 +272,21 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
       );
 
       if (did.properties().get("batchDetails")) {
-        const data = {
+        let data = {
           address: Utils.aliasIdToBech32(didID, "snd"),
           dateTimeCreated: did.metadataCreated().toRFC3339(),
-          dateTimeUpdated: did.metadataUpdated().toRFC3339(),
           produceType: did.properties().get("batchDetails").vineyardDetails
             ?.grapeVariety,
         };
+
+        if (did.properties().get("activity")) {
+          data = {
+            ...data,
+            actitvity: did.properties().get("activity"),
+            batchId: did.properties().get("batchID"),
+          };
+        }
+
         didBatches.push(data);
       }
     }
@@ -325,7 +335,18 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     // Create a new DID document with a placeholder DID.
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
     const document = new IotaDocument(networkHrp);
+    const generatedBatchId = generateBatchIDWithUUID();
     document.setPropertyUnchecked("batchDetails", req.body?.batchDetails);
+    document.setPropertyUnchecked("batchID", generatedBatchId);
+    document.setPropertyUnchecked("activity", [
+      {
+        message: `New batch ${generatedBatchId} added to system successfully.`,
+        dateTime: new Date().toISOString(),
+      },
+    ]);
+    document.setPropertyUnchecked("organicCertified", []);
+    document.setPropertyUnchecked("processor", []);
+    document.setPropertyUnchecked("retailer", []);
 
     const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
@@ -342,7 +363,6 @@ app.post("/api/v1/submitBatch", async (req, res) => {
       farmerAliasAddress,
       document
     );
-    console.log("Alias Output:", JSON.stringify(aliasOutput, null, 2));
 
     aliasOutput = await client.buildAliasOutput({
       ...aliasOutput,
@@ -358,7 +378,6 @@ app.post("/api/v1/submitBatch", async (req, res) => {
       aliasId: aliasOutput.getAliasId(),
       unlockConditions: aliasOutput.getUnlockConditions(),
     });
-
     // Publish the Alias Output and get the published DID document.
     const published = await didClient.publishDidOutput(
       {
@@ -406,64 +425,70 @@ app.get("/api/v1/details", async (req, res) => {
 });
 
 // Endpoint that accepts query parameters
-app.post("/api/v1/addBatchAccessRights", async (req, res) => {
+app.post("/api/v1/requestForOrganicCert", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
-    const requesterDid = req.body?.requesterDid;
 
     // Construct a resolver using the client.
     const resolver = new Resolver({
       client: didClient,
     });
 
-    const alias = await client.aliasOutputIds([
+    const queryParams = req.body.batchAddress;
+    const targetDid = req.body.targetDid;
+
+    const document = await resolver.resolve(
+      `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
+    );
+
+    const document2 = await resolver.resolve(targetDid);
+
+    const exisitingBatchAliasOutput = await didClient.resolveDidOutput(
+      document.id()
+    );
+
+    const newControllerAliasAddress = new AliasAddress(
+      IotaDID.fromJSON(targetDid).toAliasId()
+    );
+
+    // Update the state controller unlock condition
+    const updatedUnlockConditions = exisitingBatchAliasOutput
+      .getUnlockConditions()
+      .map((uc) => {
+        if (uc.getType() === UnlockConditionType.StateControllerAddress) {
+          return new StateControllerAddressUnlockCondition(
+            newControllerAliasAddress
+          );
+        }
+        return uc;
+      });
+
+    const rentStructure = await didClient.getRentStructure();
+
+    // Rebuild the Alias Output with updated unlock conditions
+    let updatedAliasOutput = await client.buildAliasOutput({
+      ...exisitingBatchAliasOutput,
+      unlockConditions: updatedUnlockConditions,
+    });
+
+    let aliasOutput = await client.buildAliasOutput({
+      ...updatedAliasOutput,
+      amount: Utils.computeStorageDeposit(updatedAliasOutput, rentStructure),
+      unlockConditions: updatedUnlockConditions,
+    });
+
+    // Publish the updated batch DID Document
+    const updated = await didClient.publishDidOutput(
       {
-        sender: req.body.batchAddress,
+        stronghold: {
+          password: req.body?.password,
+          snapshotPath: process.env.STRONGHOLD_SNAPSHOT_PATH,
+        },
       },
-    ]);
-    console.log(alias);
-    if (alias.items[0]) {
-      const didID = Utils.computeAliasId(alias.items[0]);
-      console.log(didID);
-      const batchDid = await resolver.resolve(`did:iota:snd:${didID}`); // Get the DID document of the batch.
+      aliasOutput
+    );
 
-      // // const requesterDocument = await resolver.resolve(requesterDid);
-      // // console.log(requesterDocument)
-      // // requesterDocument.
-      // // Resolve the latest output and update it with the given document.
-      // let aliasOutput = await didClient.updateDidOutput(batchDid);
-      // aliasOutput
-      //   .getUnlockConditions()
-      //   .push(
-      //     new StateControllerAddressUnlockCondition(
-      //       new Ed25519Address(Utils.bech32ToHex(requesterDocument()))
-      //     )
-      //   );
-      // console.log(aliasOutput.getUnlockConditions());
-
-      // // Because the size of the DID document increased, we have to increase the allocated storage deposit.
-      // // This increases the deposit amount to the new minimum.
-      // const rentStructure = await didClient.getRentStructure();
-
-      // aliasOutput = await client.buildAliasOutput({
-      //   ...aliasOutput,
-      //   amount: Utils.computeStorageDeposit(aliasOutput, rentStructure),
-      //   aliasId: aliasOutput.getAliasId(),
-      //   unlockConditions: aliasOutput.getUnlockConditions(),
-      // });
-
-      // // Publish the output.
-      // const updated = await didClient.publishDidOutput(
-      //   {
-      //     stronghold: {
-      //       password: req.body?.password,
-      //       snapshotPath: process.env.STRONGHOLD_SNAPSHOT_PATH,
-      //     },
-      //   },
-      //   aliasOutput
-      // );
-      // console.log("Updated DID document:", JSON.stringify(updated, null, 2));
-    }
+    console.log(updated);
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
