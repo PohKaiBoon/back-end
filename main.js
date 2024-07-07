@@ -343,9 +343,6 @@ app.post("/api/v1/submitBatch", async (req, res) => {
         dateTime: new Date().toISOString(),
       },
     ]);
-    document.setPropertyUnchecked("organicCertified", []);
-    document.setPropertyUnchecked("processor", []);
-    document.setPropertyUnchecked("retailer", []);
 
     // Insert a new Ed25519 verification method in the DID document.
     await document.generateMethod(
@@ -414,6 +411,7 @@ app.get("/api/v1/details", async (req, res) => {
     res.json({
       batchDetails: document.properties().get("batchDetails"),
       metadata: document.metadata(),
+      activity: document.properties().get("activity"),
     });
   } catch (error) {
     console.log(error);
