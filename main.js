@@ -423,7 +423,7 @@ app.get("/api/v1/details", async (req, res) => {
 });
 
 // Endpoint that accepts query parameters
-app.post("/api/v1/requestForOrganicCert", async (req, res) => {
+app.post("/api/v1/validateOrganicCertification", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
 
@@ -432,25 +432,164 @@ app.post("/api/v1/requestForOrganicCert", async (req, res) => {
       client: didClient,
     });
 
+    const networkHrp = await didClient.getNetworkHrp();
+    const rentStructure = await didClient.getRentStructure();
+    const issuerStorage = new Storage(new JwkMemStore(), new KeyIdMemStore());
+
     const queryParams = req.body.batchAddress;
-    const targetDid = req.body.targetDid;
+    const batchInDid = `did:iota:snd:${Utils.bech32ToHex(queryParams)}`;
 
     const document = await resolver.resolve(
       `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
     );
 
-    const document2 = await resolver.resolve(targetDid);
+    const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
 
-    const exisitingBatchAliasOutput = await didClient.resolveDidOutput(
-      document.id()
+    if (issuerDid.resolveMethod("#jwk")) {
+      issuerDid.removeMethod(issuerDid.resolveMethod("#jwk").id());
+    }
+
+    const fragment = await issuerDid.generateMethod(
+      issuerStorage,
+      JwkMemStore.ed25519KeyType(),
+      JwsAlgorithm.EdDSA,
+      "#jwk",
+      MethodScope.AssertionMethod()
+    );
+
+    // Create a credential subject indicating the degree earned by Alice, linked to their DID.
+    const subject = {
+      id: document.id(),
+      certificationNumber: "13168",
+      certifiedEntity: {
+        name: "Bonnie House Pty Ltd",
+        address: "273 Collier Rd, Bayswater Western Australia 6053, Australia",
+        facilities: "Unit 3.2 21 South Street, Rydalmere NSW 2116, Australia",
+      },
+      standards: [
+        {
+          standardName: "Australian Certified Organic Standard 2021 v1",
+          scope: [
+            "Contract Processor",
+            "Handler",
+            "Processor",
+            "Exporter",
+            "Food",
+            "Importer",
+            "Independent Contract Processor",
+            "Wholesaler",
+          ],
+          registrationNumber: "39",
+        },
+        {
+          standardName:
+            "Australian National Standard for Organic and Biodynamic Produce 3.8",
+          scope: [
+            "Contract Processor",
+            "Handler",
+            "Processor",
+            "Cosmetics",
+            "Exporter",
+            "Food",
+            "Importer",
+            "Independent Contract Processor",
+            "Wholesaler",
+          ],
+          registrationNumber: "AU-BIO-001",
+        },
+        {
+          standardName: "USDA Organic",
+          scope: "Handling",
+          effectiveDate: "2020-12-04",
+          usdaAnniversaryDate: "2023-11-02",
+        },
+        {
+          standardName: "Australian Certified Organic Standard (EU Equivalent)",
+          scope: "Processed products",
+          effectiveDate: "2023-09-02",
+          registrationNumber: "AU-BIO-107",
+        },
+        {
+          standardName:
+            "Certified to Retained Regulations 834/2007, 889/2008 and 1235/2008 for Exporting Organic Products to Great Britain",
+          scope: "Processed products",
+        },
+      ],
+      authorizedBy: {
+        name: "Kate Allan",
+        title: "General Manager - Certification",
+        signature: "C-12732-2023",
+      },
+    };
+
+    // Create an unsigned `UniversityDegree` credential for Alice
+    const unsignedVc = new Credential({
+      id: "https://www.bonniehouse.com/information/information&information_id=3",
+      type: "OrganicCertificationCredential",
+      issuer: issuerDid.id(),
+      credentialSubject: subject,
+      issuanceDate: new Date().toISOString(),
+      expirationDate: new Date(
+        new Date().getTime() + 31556952000
+      ).toISOString(),
+    });
+
+    // Create signed JWT credential.
+    const credentialJwt = await issuerDid.createCredentialJwt(
+      issuerStorage,
+      fragment,
+      unsignedVc,
+      new JwsSignatureOptions()
+    );
+    console.log(`Credential JWT > ${credentialJwt.toString()}`);
+
+    // // call Core API methods
+    // const { cid } = await ipfsClient.add(credentialJwt.toJSON());
+    // console.log("File added to IPFS with CID:", cid.toString());
+
+    // Add the VC data and referencing DID to a new DID in issuer side.
+    const newIssuerDoc = new IotaDocument(networkHrp);
+    const vcString = credentialJwt.toString();
+    const previousSource = {
+      batchAddress: req.body.batchAddress,
+      batchDid: batchInDid,
+    };
+
+    newIssuerDoc.setPropertyUnchecked("vcString", vcString);
+
+    if (!newIssuerDoc.properties().get("previousSource")) {
+      newIssuerDoc.setPropertyUnchecked("previousSource", []);
+    }
+    newIssuerDoc.properties().get("previousSource").push(previousSource);
+    newIssuerDoc.setPropertyUnchecked("previousSource", [previousSource]);
+    newIssuerDoc.setPropertyUnchecked("type", "OrganicCertification");
+    newIssuerDoc.setPropertyUnchecked("batchAddress", req.body.batchAddress);
+
+    const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
+
+    // Insert a new Ed25519 verification method in the DID document.
+    await newIssuerDoc.generateMethod(
+      storage,
+      JwkMemStore.ed25519KeyType(),
+      JwsAlgorithm.EdDSA,
+      "#key-1",
+      MethodScope.VerificationMethod()
+    );
+
+    const issuerAliasAddress = new AliasAddress(
+      IotaDID.fromJSON(req.body?.issuerDid).toAliasId()
+    );
+
+    var aliasOutput = await didClient.newDidOutput(
+      issuerAliasAddress,
+      newIssuerDoc
     );
 
     const newControllerAliasAddress = new AliasAddress(
-      IotaDID.fromJSON(targetDid).toAliasId()
+      IotaDID.fromJSON(batchInDid).toAliasId()
     );
-
     // Update the state controller unlock condition
-    const updatedUnlockConditions = exisitingBatchAliasOutput
+    const updatedUnlockConditions = aliasOutput
       .getUnlockConditions()
       .map((uc) => {
         if (uc.getType() === UnlockConditionType.StateControllerAddress) {
@@ -461,22 +600,22 @@ app.post("/api/v1/requestForOrganicCert", async (req, res) => {
         return uc;
       });
 
-    const rentStructure = await didClient.getRentStructure();
-
-    // Rebuild the Alias Output with updated unlock conditions
-    let updatedAliasOutput = await client.buildAliasOutput({
-      ...exisitingBatchAliasOutput,
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      immutableFeatures: [new IssuerFeature(issuerAliasAddress)],
+      aliasId: aliasOutput.getAliasId(),
       unlockConditions: updatedUnlockConditions,
     });
 
-    let aliasOutput = await client.buildAliasOutput({
-      ...updatedAliasOutput,
-      amount: Utils.computeStorageDeposit(updatedAliasOutput, rentStructure),
+    // Adding the issuer feature means we have to recalculate the required storage deposit.
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      amount: Utils.computeStorageDeposit(aliasOutput, rentStructure),
+      aliasId: aliasOutput.getAliasId(),
       unlockConditions: updatedUnlockConditions,
     });
-
-    // Publish the updated batch DID Document
-    const updated = await didClient.publishDidOutput(
+    // Publish the Alias Output and get the published DID document.
+    const published = await didClient.publishDidOutput(
       {
         stronghold: {
           password: req.body?.password,
@@ -485,8 +624,7 @@ app.post("/api/v1/requestForOrganicCert", async (req, res) => {
       },
       aliasOutput
     );
-
-    console.log(updated);
+    console.log("Published DID document:", JSON.stringify(published, null, 2));
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
@@ -510,15 +648,12 @@ app.post("/api/v1/addTraceability", async (req, res) => {
       client: didClient,
     });
 
-    const alias = await client.aliasOutputIds([
-      {
-        sender: req.body.batchAddress,
-      },
-    ]);
+    const batchDid = await resolver.resolve(
+      `did:iota:snd:${Utils.bech32ToHex(req.body?.batchAddress)}`
+    ); // Get the DID document of the batch.
 
     if (alias.items[0]) {
       const didID = Utils.computeAliasId(alias.items[0]);
-      const batchDid = await resolver.resolve(`did:iota:snd:${didID}`); // Get the DID document of the batch.
       const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
       issuerDid.removeMethod(issuerDid.resolveMethod("#jwk").id());
 
