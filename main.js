@@ -61,6 +61,7 @@ const client = new Client({
 });
 
 let wallet = null;
+const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
 try {
   const directoryPath = path.join(__dirname, process.env.WALLET_DB_PATH);
@@ -191,8 +192,6 @@ app.post("/api/v1/createWallet", async (req, res) => {
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
     const document = new IotaDocument(networkHrp);
     document.setPropertyUnchecked("type", "Actor");
-
-    const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
     // Insert a new Ed25519 verification method in the DID document.
     await document.generateMethod(
@@ -348,8 +347,6 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     document.setPropertyUnchecked("processor", []);
     document.setPropertyUnchecked("retailer", []);
 
-    const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
-
     // Insert a new Ed25519 verification method in the DID document.
     await document.generateMethod(
       storage,
@@ -436,8 +433,6 @@ app.post("/api/v1/validateOrganicCertification", async (req, res) => {
 
     const networkHrp = await didClient.getNetworkHrp();
     const rentStructure = await didClient.getRentStructure();
-    const issuerStorage = new Storage(new JwkMemStore(), new KeyIdMemStore());
-
     const queryParams = req.body.batchAddress;
     const batchInDid = `did:iota:snd:${Utils.bech32ToHex(queryParams)}`;
 
@@ -446,18 +441,6 @@ app.post("/api/v1/validateOrganicCertification", async (req, res) => {
     );
 
     const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
-
-    if (issuerDid.resolveMethod("#jwk")) {
-      issuerDid.removeMethod(issuerDid.resolveMethod("#jwk").id());
-    }
-
-    const fragment = await issuerDid.generateMethod(
-      issuerStorage,
-      JwkMemStore.ed25519KeyType(),
-      JwsAlgorithm.EdDSA,
-      "#jwk",
-      MethodScope.AssertionMethod()
-    );
 
     // Create a credential subject indicating the degree earned by Alice, linked to their DID.
     const subject = {
@@ -538,8 +521,8 @@ app.post("/api/v1/validateOrganicCertification", async (req, res) => {
 
     // Create signed JWT credential.
     const credentialJwt = await issuerDid.createCredentialJwt(
-      issuerStorage,
-      fragment,
+      storage,
+      "#key-1",
       unsignedVc,
       new JwsSignatureOptions()
     );
@@ -566,9 +549,12 @@ app.post("/api/v1/validateOrganicCertification", async (req, res) => {
     newIssuerDoc.setPropertyUnchecked("previousSource", [previousSource]);
     newIssuerDoc.setPropertyUnchecked("type", "OrganicCertification");
     newIssuerDoc.setPropertyUnchecked("batchAddress", req.body.batchAddress);
-
-    const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
-
+    newIssuerDoc.setPropertyUnchecked("activity", [
+      {
+        message: `Organic certified to batch ${req.body.batchAddress}. Click on "View Credentials" button to view the certification details.`,
+        dateTime: new Date().toISOString(),
+      },
+    ]);
     // Insert a new Ed25519 verification method in the DID document.
     await newIssuerDoc.generateMethod(
       storage,
@@ -641,8 +627,6 @@ app.post("/api/v1/addTraceability", async (req, res) => {
 
     const ipfsClient = ipfs.create({ url: "http://127.0.0.1:5001" });
 
-    const issuerStorage = new Storage(new JwkMemStore(), new KeyIdMemStore());
-
     const didClient = new IotaIdentityClient(client);
 
     // Construct a resolver using the client.
@@ -660,7 +644,7 @@ app.post("/api/v1/addTraceability", async (req, res) => {
       issuerDid.removeMethod(issuerDid.resolveMethod("#jwk").id());
 
       const fragment = await issuerDid.generateMethod(
-        issuerStorage,
+        storage,
         JwkMemStore.ed25519KeyType(),
         JwsAlgorithm.EdDSA,
         "#jwk",
@@ -750,7 +734,7 @@ app.post("/api/v1/addTraceability", async (req, res) => {
 
       // Create signed JWT credential.
       const credentialJwt = await issuerDid.createCredentialJwt(
-        issuerStorage,
+        storage,
         fragment,
         unsignedVc,
         new JwsSignatureOptions()
