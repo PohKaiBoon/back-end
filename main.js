@@ -344,9 +344,6 @@ app.post("/api/v1/submitBatch", async (req, res) => {
         dateTime: new Date().toISOString(),
       },
     ]);
-    document.setPropertyUnchecked("organicCertified", []);
-    document.setPropertyUnchecked("processor", []);
-    document.setPropertyUnchecked("retailer", []);
 
     const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
 
@@ -417,6 +414,7 @@ app.get("/api/v1/details", async (req, res) => {
     res.json({
       batchDetails: document.properties().get("batchDetails"),
       metadata: document.metadata(),
+      activity: document.properties().get("activity"),
     });
   } catch (error) {
     console.log(error);
