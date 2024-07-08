@@ -270,18 +270,19 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
         IotaDID.fromJSON(`did:iota:snd:${didID}`)
       );
 
-      if (did.properties().get("batchDetails")) {
+      if (did.properties().get("harvestDetails")) {
         let data = {
           address: Utils.aliasIdToBech32(didID, "snd"),
           dateTimeCreated: did.metadataCreated().toRFC3339(),
-          produceType: did.properties().get("batchDetails").vineyardDetails
+          dateTimeUpdated: did.metadataUpdated().toRFC3339(),
+          produceType: did.properties().get("harvestDetails").vineyardDetails
             ?.grapeVariety,
         };
 
         if (did.properties().get("activity")) {
           data = {
             ...data,
-            actitvity: did.properties().get("activity"),
+            activity: did.properties().get("activity"),
             batchId: did.properties().get("batchID"),
           };
         }
@@ -335,7 +336,7 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
     const document = new IotaDocument(networkHrp);
     const generatedBatchId = generateBatchIDWithUUID();
-    document.setPropertyUnchecked("batchDetails", req.body?.batchDetails);
+    document.setPropertyUnchecked("harvestDetails", req.body?.harvestDetails);
     document.setPropertyUnchecked("batchID", generatedBatchId);
     document.setPropertyUnchecked("activity", [
       {
@@ -397,6 +398,7 @@ app.post("/api/v1/submitBatch", async (req, res) => {
 app.get("/api/v1/details", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
+    let traceabilityInfo = [];
 
     // Construct a resolver using the client.
     const resolver = new Resolver({
@@ -405,13 +407,42 @@ app.get("/api/v1/details", async (req, res) => {
     // Access query parameters
     const queryParams = req.query.address;
 
+    // Get initial data
     const document = await resolver.resolve(
       `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
     );
+
+    // Check if there are any alias outputs for new traceability information
+
+    const alias = await client.aliasOutputIds([
+      {
+        stateController: queryParams,
+      },
+    ]);
+
+    if (alias && alias.items.length > 0) {
+      for (const id of alias.items) {
+        const didID = Utils.computeAliasId(id);
+
+        const did = await didClient.resolveDid(
+          IotaDID.fromJSON(`did:iota:snd:${didID}`)
+        );
+        let data = {
+          type: did.properties().get("type"),
+          vcString: did.properties().get("vcString"),
+          dateTime: did.metadataCreated().toRFC3339(),
+          activity: did.properties().get("activity"),
+        };
+        traceabilityInfo.push(data);
+      }
+    }
+
     res.json({
-      batchDetails: document.properties().get("batchDetails"),
+      harvestDetails: document.properties().get("harvestDetails"),
       metadata: document.metadata(),
+      batchId: queryParams,
       activity: document.properties().get("activity"),
+      traceabilityInfo: traceabilityInfo,
     });
   } catch (error) {
     console.log(error);
@@ -851,35 +882,57 @@ app.post("/api/v1/addTraceability", async (req, res) => {
         "Updated Batch DID Document Published:",
         JSON.stringify(updatedIssuer, null, 2)
       );
-      console.log(issuerDid);
-      // Before sending this credential to the holder the issuer wants to validate that some properties
-      // of the credential satisfy their expectations.
-
-      // Validate the credential's signature, the credential's semantic structure,
-      // check that the issuance date is not in the future and that the expiration date is not in the past.
-      // Note that the validation returns an object containing the decoded credential.
-      // const decoded_credential = new JwtCredentialValidator(
-      //   new EdDSAJwsVerifier()
-      // ).validate(
-      //   credentialJwt,
-      //   issuerDid,
-      //   new JwtCredentialValidationOptions(),
-      //   FailFast.FirstError
-      // );
-
-      // // Since `validate` did not throw any errors we know that the credential was successfully validated.
-      // console.log(`VC successfully validated`);
-
-      // // The issuer is now sure that the credential they are about to issue satisfies their expectations.
-      // // Note that the credential is NOT published to the IOTA Tangle. It is sent and stored off-chain.
-      // console.log(
-      //   `Issued credential: ${JSON.stringify(
-      //     decoded_credential.intoCredential(),
-      //     null,
-      //     2
-      //   )}`
-      // );
     }
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).json(error);
+  }
+});
+
+app.post("/api/v1/validateDid", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+
+    const did = req.body?.did;
+
+    // Validate the DID format
+    const document = await didClient.resolveDid(IotaDID.fromJSON(did));
+    res.status(200).json(document);
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).json(error);
+  }
+});
+
+// Verify the issued credential
+app.post("/api/v1/verifyCredential", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
+    const credentialJwt = req.body.credentialJwt;
+    const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
+
+    const decoded_credential = new JwtCredentialValidator(
+      new EdDSAJwsVerifier()
+    ).validate(
+      new Jwt(credentialJwt),
+      issuerDid,
+      new JwtCredentialValidationOptions(),
+      FailFast.FirstError
+    );
+
+    // Since `validate` did not throw any errors we know that the credential was successfully validated.
+    console.log(`VC successfully validated`);
+
+    res
+      .status(200)
+      .json(
+        JSON.parse(JSON.stringify(decoded_credential.intoCredential(), null, 2))
+      );
   } catch (error) {
     console.error("Error: ", error);
     res.status(500).json(error);
