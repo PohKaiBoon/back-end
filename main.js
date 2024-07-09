@@ -300,6 +300,55 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
   }
 });
 
+` `; //Get all activities under an account
+app.post("/api/v1/getAllActivities", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+    let didBatches = [];
+
+    const farmerAliasAddress = Utils.aliasIdToBech32(
+      new AliasAddress(
+        IotaDID.fromJSON(req.body?.did).toAliasId()
+      ).getAliasId(),
+      "snd"
+    );
+
+    const alias = await client.aliasOutputIds([
+      {
+        issuer: farmerAliasAddress,
+      },
+    ]);
+
+    for (const id of alias.items) {
+      const didID = Utils.computeAliasId(id);
+      const did = await didClient.resolveDid(
+        IotaDID.fromJSON(`did:iota:snd:${didID}`)
+      );
+
+      console.log(did);
+
+      if (did.properties().get("activity")) {
+        let data = {
+          batchAddress: did.properties().get("batchAddress"),
+          activity: did.properties().get("activity"),
+          batchId: did.properties().get("batchID"),
+          type: did.properties().get("type")
+            ? did.properties().get("type")
+            : null,
+        };
+        didBatches.push(data);
+      }
+    }
+
+    // console.log(didBatches);
+    res.status(200).json(didBatches);
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).json(JSON.parse(error));
+    exit();
+  }
+});
+
 app.post("/api/v1/generateAddress", async (req, res) => {
   try {
     const account = await wallet.getAccount(req.body?.alias);
