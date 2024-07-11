@@ -176,14 +176,8 @@ app.post("/api/v1/createWallet", async (req, res) => {
     const address = (await account.generateEd25519Addresses(1))[0];
     console.log(address.address);
 
-    const faucetResponse = await (
-      await tempWallet.getClient()
-    ).requestFundsFromFaucet(process.env.FAUCET_URL, address.address);
+    await ensureAddressHasFunds(client, address.address);
 
-    console.log(faucetResponse);
-    setTimeout(() => {
-      // Code to be executed after 5 seconds
-    }, 5000);
     const didClient = new IotaIdentityClient(client);
 
     const networkHrp = await didClient.getNetworkHrp();
@@ -481,6 +475,7 @@ app.get("/api/v1/details", async (req, res) => {
           vcString: did.properties().get("vcString"),
           dateTime: did.metadataCreated().toRFC3339(),
           activity: did.properties().get("activity"),
+          issuer: Utils.bech32ToHex(did.metadataGovernorAddress()),
         };
         traceabilityInfo.push(data);
       }
@@ -500,7 +495,7 @@ app.get("/api/v1/details", async (req, res) => {
 });
 
 // Endpoint that accepts query parameters
-app.post("/api/v1/validateOrganicCertification", async (req, res) => {
+app.post("/api/v1/issueOrganicCertification", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
 
