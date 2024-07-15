@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon main.js"
+    "start": "nodemon main.js",
+    "build": "tsc"
   },
   "author": "",
   "license": "ISC",
@@ -16,6 +17,10 @@
     "dotenv": "16.4.5",
     "express": "^4.18.2",
     "kubo-rpc-client": "^4.1.1",
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.4",
+    "uuid": "10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
   }
 }

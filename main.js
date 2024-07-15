@@ -20,8 +20,6 @@ const {
   IotaDocument,
   IotaIdentityClient,
   Storage,
-  JwkMemStore,
-  KeyIdMemStore,
   JwsAlgorithm,
   Credential,
   IotaDID,
@@ -45,6 +43,8 @@ const {
   convertToHumanReadable,
   generateBatchIDWithUUID,
 } = require("./utils/utils");
+const { JwkMemStore } = require("./dist/jwk_storage");
+const { KeyIdFileStore } = require("./dist/key_id");
 
 const app = express();
 app.use(cors());
@@ -61,7 +61,7 @@ const client = new Client({
 });
 
 let wallet = null;
-const storage = new Storage(new JwkMemStore(), new KeyIdMemStore());
+const storage = new Storage(new JwkMemStore(), new KeyIdFileStore());
 
 try {
   const directoryPath = path.join(__dirname, process.env.WALLET_DB_PATH);
@@ -259,16 +259,33 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
 
     for (const id of alias.items) {
       const didID = Utils.computeAliasId(id);
-      console.log(didID);
+      // console.log(didID);
       const did = await didClient.resolveDid(
         IotaDID.fromJSON(`did:iota:snd:${didID}`)
       );
+
+      const alias = await client.aliasOutputIds([
+        {
+          stateController: Utils.aliasIdToBech32(didID, "snd"),
+        },
+      ]);
+
+      let dateTimeUpdated;
+      if (alias.items[alias.items.length - 1]) {
+        const latestDID = Utils.computeAliasId(
+          alias.items[alias.items.length - 1]
+        );
+        const latest = await didClient.resolveDid(
+          IotaDID.fromJSON(`did:iota:snd:${latestDID}`)
+        );
+        dateTimeUpdated = latest.metadataUpdated();
+      }
 
       if (did.properties().get("harvestDetails")) {
         let data = {
           address: Utils.aliasIdToBech32(didID, "snd"),
           dateTimeCreated: did.metadataCreated().toRFC3339(),
-          dateTimeUpdated: did.metadataUpdated().toRFC3339(),
+          dateTimeUpdated: dateTimeUpdated ?? did.metadataUpdated().toRFC3339(),
           produceType: did.properties().get("harvestDetails").vineyardDetails
             ?.grapeVariety,
         };
@@ -294,7 +311,7 @@ app.post("/api/v1/getAllBatches", async (req, res) => {
   }
 });
 
-` `; //Get all activities under an account
+//Get all activities under an account
 app.post("/api/v1/getAllActivities", async (req, res) => {
   try {
     const didClient = new IotaIdentityClient(client);
@@ -319,11 +336,13 @@ app.post("/api/v1/getAllActivities", async (req, res) => {
         IotaDID.fromJSON(`did:iota:snd:${didID}`)
       );
 
-      console.log(did);
+      // console.log(did);
 
       if (did.properties().get("activity")) {
         let data = {
-          batchAddress: did.properties().get("batchAddress"),
+          batchAddress:
+            did.properties().get("batchAddress") ??
+            Utils.aliasIdToBech32(didID, "snd"),
           activity: did.properties().get("activity"),
           batchId: did.properties().get("batchID"),
           type: did.properties().get("type")
@@ -378,15 +397,15 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     // Create a new DID document with a placeholder DID.
     // The DID will be derived from the Alias Id of the Alias Output after publishing.
     const document = new IotaDocument(networkHrp);
-    const generatedBatchId = generateBatchIDWithUUID();
     document.setPropertyUnchecked("harvestDetails", req.body?.harvestDetails);
-    document.setPropertyUnchecked("batchID", generatedBatchId);
     document.setPropertyUnchecked("activity", [
       {
-        message: `New batch ${generatedBatchId} added to system successfully.`,
+        message: `New batch added to system successfully.`,
         dateTime: new Date().toISOString(),
       },
     ]);
+    document.setPropertyUnchecked("type", "NewBatch");
+    document.setPropertyUnchecked("batchAddress", req.body.batchAddress);
 
     // Insert a new Ed25519 verification method in the DID document.
     await document.generateMethod(
@@ -428,7 +447,7 @@ app.post("/api/v1/submitBatch", async (req, res) => {
     );
     console.log("Published DID document:", JSON.stringify(published, null, 2));
 
-    res.status(200).json([]);
+    res.status(200).json(published.id().toString());
 
     // console.log(published.id());
   } catch (error) {
@@ -979,6 +998,156 @@ app.post("/api/v1/verifyCredential", async (req, res) => {
       );
   } catch (error) {
     console.error("Error: ", error);
+    res.status(500).json(error);
+  }
+});
+
+app.post("/api/v1/processorTraceabilityInfo", async (req, res) => {
+  try {
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
+
+    const networkHrp = await didClient.getNetworkHrp();
+    const rentStructure = await didClient.getRentStructure();
+    const queryParams = req.body.batchAddress;
+    const batchInDid = `did:iota:snd:${Utils.bech32ToHex(queryParams)}`;
+
+    // const batchDocument = await resolver.resolve(
+    //   `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
+    // );
+
+    const alias = await client.aliasOutputIds([
+      {
+        stateController: queryParams,
+      },
+    ]);
+
+    let existingSources = [];
+    let previousDid;
+
+    if (alias && alias.items.length > 0) {
+      const lastAliasIndex = alias.items.length - 1;
+      const didID = Utils.computeAliasId(alias.items[lastAliasIndex]);
+
+      const did = await didClient.resolveDid(
+        IotaDID.fromJSON(`did:iota:snd:${didID}`)
+      );
+
+      previousDid = did.id().toString();
+      existingSources = did.properties().get("previousSource");
+    }
+
+    const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
+
+    // Create an unsigned `UniversityDegree` credential for Alice
+    const unsignedVc = new Credential({
+      type: `${req.body.processorDetails.processorInfo.type}Credential`,
+      issuer: issuerDid.id(),
+      credentialSubject: req.body.processorDetails,
+      issuanceDate: new Date().toISOString(),
+    });
+
+    // Create signed JWT credential.
+    const credentialJwt = await issuerDid.createCredentialJwt(
+      storage,
+      "#key-1",
+      unsignedVc,
+      new JwsSignatureOptions()
+    );
+    console.log(`Credential JWT > ${credentialJwt.toString()}`);
+
+    // Add the VC data and referencing DID to a new DID in issuer side.
+    const newIssuerDoc = new IotaDocument(networkHrp);
+    const vcString = credentialJwt.toString();
+    const previousSource = {
+      batchAddress: req.body.batchAddress,
+      batchDid: previousDid,
+    };
+    existingSources.push(previousSource);
+
+    const message =
+      req.body.processorDetails.processorInfo.type === "ReceivedDelivery"
+        ? `Received delivery for batch ${req.body.batchAddress}`
+        : `Added processing information for batch ${req.body.batchAddress}`;
+
+    newIssuerDoc.setPropertyUnchecked("vcString", vcString);
+
+    newIssuerDoc.setPropertyUnchecked("previousSource", existingSources);
+    newIssuerDoc.setPropertyUnchecked(
+      "type",
+      req.body.processorDetails.processorInfo.type
+    );
+    newIssuerDoc.setPropertyUnchecked("batchAddress", req.body.batchAddress);
+    newIssuerDoc.setPropertyUnchecked("activity", [
+      {
+        message: message,
+        dateTime: new Date().toISOString(),
+      },
+    ]);
+    console.log(newIssuerDoc.properties().get("previousSource"));
+    // Insert a new Ed25519 verification method in the DID document.
+
+    await newIssuerDoc.generateMethod(
+      storage,
+      JwkMemStore.ed25519KeyType(),
+      JwsAlgorithm.EdDSA,
+      "#key-1",
+      MethodScope.VerificationMethod()
+    );
+
+    const issuerAliasAddress = new AliasAddress(
+      IotaDID.fromJSON(req.body?.issuerDid).toAliasId()
+    );
+
+    var aliasOutput = await didClient.newDidOutput(
+      issuerAliasAddress,
+      newIssuerDoc
+    );
+
+    const newControllerAliasAddress = new AliasAddress(
+      IotaDID.fromJSON(batchInDid).toAliasId()
+    );
+    // Update the state controller unlock condition
+    const updatedUnlockConditions = aliasOutput
+      .getUnlockConditions()
+      .map((uc) => {
+        if (uc.getType() === UnlockConditionType.StateControllerAddress) {
+          return new StateControllerAddressUnlockCondition(
+            newControllerAliasAddress
+          );
+        }
+        return uc;
+      });
+
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      immutableFeatures: [new IssuerFeature(issuerAliasAddress)],
+      aliasId: aliasOutput.getAliasId(),
+      unlockConditions: updatedUnlockConditions,
+    });
+
+    // Adding the issuer feature means we have to recalculate the required storage deposit.
+    aliasOutput = await client.buildAliasOutput({
+      ...aliasOutput,
+      amount: Utils.computeStorageDeposit(aliasOutput, rentStructure),
+      aliasId: aliasOutput.getAliasId(),
+      unlockConditions: updatedUnlockConditions,
+    });
+    // Publish the Alias Output and get the published DID document.
+    const published = await didClient.publishDidOutput(
+      {
+        stronghold: {
+          password: req.body?.password,
+          snapshotPath: process.env.STRONGHOLD_SNAPSHOT_PATH,
+        },
+      },
+      aliasOutput
+    );
+    console.log("Published DID document:", JSON.stringify(published, null, 2));
+  } catch (error) {
+    console.log(error);
     res.status(500).json(error);
   }
 });
