@@ -362,6 +362,79 @@ app.post("/api/v1/getAllActivities", async (req, res) => {
   }
 });
 
+app.post("/api/v1/getAllCertificates", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
+    let certifications = [];
+
+    const farmerAliasAddress = Utils.aliasIdToBech32(
+      new AliasAddress(
+        IotaDID.fromJSON(req.body?.did).toAliasId()
+      ).getAliasId(),
+      "snd"
+    );
+
+    const alias = await client.aliasOutputIds([
+      {
+        issuer: farmerAliasAddress,
+      },
+    ]);
+
+    for (const id of alias.items) {
+      const didID = Utils.computeAliasId(id);
+      const did = await didClient.resolveDid(
+        IotaDID.fromJSON(`did:iota:snd:${didID}`)
+      );
+
+      // console.log(did);
+
+      if (did.properties().get("vcString")) {
+        const credentialJwt = did.properties().get("vcString");
+        const issuerDid = await resolver.resolve(req.body.did); // Get the DID document of the issuer.
+
+        const decoded_credential = new JwtCredentialValidator(
+          new EdDSAJwsVerifier()
+        ).validate(
+          new Jwt(credentialJwt),
+          issuerDid,
+          new JwtCredentialValidationOptions(),
+          FailFast.FirstError
+        );
+
+        const credential = decoded_credential.intoCredential();
+
+        let data = {
+          issuedTo: credential.credentialSubject()[0].id ?? null,
+          type: credential.type()[1] ?? null,
+          dateTimeCreated: credential.issuanceDate().toRFC3339() ?? null,
+          dateTimeExpire: credential.expirationDate().toRFC3339() ?? null,
+          id: didID ?? null,
+        };
+
+        // Since `validate` did not throw any errors we know that the credential was successfully validated.
+        // console.log(
+        //   `VC successfully validated`,
+        //   JSON.parse(
+        //     JSON.stringify(decoded_credential.intoCredential(), null, 2)
+        //   )
+        // );
+
+        certifications.push(data);
+      }
+    }
+
+    res.status(200).json(certifications);
+  } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).json(JSON.parse(error));
+    exit();
+  }
+});
+
 app.post("/api/v1/generateAddress", async (req, res) => {
   try {
     const account = await wallet.getAccount(req.body?.alias);
@@ -513,6 +586,49 @@ app.get("/api/v1/details", async (req, res) => {
   }
 });
 
+app.get("/api/v1/credentialOutput", async (req, res) => {
+  try {
+    const didClient = new IotaIdentityClient(client);
+
+    // Construct a resolver using the client.
+    const resolver = new Resolver({
+      client: didClient,
+    });
+
+    // Access query parameters
+    const queryParams = req.query.output;
+    const did = await didClient.resolveDid(
+      IotaDID.fromJSON(`did:iota:snd:${queryParams}`)
+    );
+
+    console.log(did);
+
+    if (did.properties().get("vcString")) {
+      const credentialJwt = did.properties().get("vcString");
+      const issuerDid = await resolver.resolve(req.query?.issuerDid); // Get the DID document of the issuer.
+      const decoded_credential = new JwtCredentialValidator(
+        new EdDSAJwsVerifier()
+      ).validate(
+        new Jwt(credentialJwt),
+        issuerDid,
+        new JwtCredentialValidationOptions(),
+        FailFast.FirstError
+      );
+
+      res
+        .status(200)
+        .json(
+          JSON.parse(
+            JSON.stringify(decoded_credential.intoCredential(), null, 2)
+          )
+        );
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+});
+
 // Endpoint that accepts query parameters
 app.post("/api/v1/issueOrganicCertification", async (req, res) => {
   try {
@@ -525,83 +641,20 @@ app.post("/api/v1/issueOrganicCertification", async (req, res) => {
 
     const networkHrp = await didClient.getNetworkHrp();
     const rentStructure = await didClient.getRentStructure();
-    const queryParams = req.body.batchAddress;
-    const batchInDid = `did:iota:snd:${Utils.bech32ToHex(queryParams)}`;
+    const queryParams = req.body.certificateDetails.entityCertified.entityDid;
 
-    const document = await resolver.resolve(
-      `did:iota:snd:${Utils.bech32ToHex(queryParams)}`
-    );
+    const document = await resolver.resolve(queryParams);
 
-    const issuerDid = await resolver.resolve(req.body.issuerDid); // Get the DID document of the issuer.
+    const issuerDid = await resolver.resolve(req.body.did); // Get the DID document of the issuer.
 
     // Create a credential subject indicating the degree earned by Alice, linked to their DID.
     const subject = {
       id: document.id(),
-      certificationNumber: "13168",
-      certifiedEntity: {
-        name: "Bonnie House Pty Ltd",
-        address: "273 Collier Rd, Bayswater Western Australia 6053, Australia",
-        facilities: "Unit 3.2 21 South Street, Rydalmere NSW 2116, Australia",
-      },
-      standards: [
-        {
-          standardName: "Australian Certified Organic Standard 2021 v1",
-          scope: [
-            "Contract Processor",
-            "Handler",
-            "Processor",
-            "Exporter",
-            "Food",
-            "Importer",
-            "Independent Contract Processor",
-            "Wholesaler",
-          ],
-          registrationNumber: "39",
-        },
-        {
-          standardName:
-            "Australian National Standard for Organic and Biodynamic Produce 3.8",
-          scope: [
-            "Contract Processor",
-            "Handler",
-            "Processor",
-            "Cosmetics",
-            "Exporter",
-            "Food",
-            "Importer",
-            "Independent Contract Processor",
-            "Wholesaler",
-          ],
-          registrationNumber: "AU-BIO-001",
-        },
-        {
-          standardName: "USDA Organic",
-          scope: "Handling",
-          effectiveDate: "2020-12-04",
-          usdaAnniversaryDate: "2023-11-02",
-        },
-        {
-          standardName: "Australian Certified Organic Standard (EU Equivalent)",
-          scope: "Processed products",
-          effectiveDate: "2023-09-02",
-          registrationNumber: "AU-BIO-107",
-        },
-        {
-          standardName:
-            "Certified to Retained Regulations 834/2007, 889/2008 and 1235/2008 for Exporting Organic Products to Great Britain",
-          scope: "Processed products",
-        },
-      ],
-      authorizedBy: {
-        name: "Kate Allan",
-        title: "General Manager - Certification",
-        signature: "C-12732-2023",
-      },
+      certificateDetails: req.body.certificateDetails,
     };
 
     // Create an unsigned `UniversityDegree` credential for Alice
     const unsignedVc = new Credential({
-      id: "https://www.bonniehouse.com/information/information&information_id=3",
       type: "OrganicCertificationCredential",
       issuer: issuerDid.id(),
       credentialSubject: subject,
@@ -620,35 +673,20 @@ app.post("/api/v1/issueOrganicCertification", async (req, res) => {
     );
     console.log(`Credential JWT > ${credentialJwt.toString()}`);
 
-    // // call Core API methods
-    // const { cid } = await ipfsClient.add(credentialJwt.toJSON());
-    // console.log("File added to IPFS with CID:", cid.toString());
-
     // Add the VC data and referencing DID to a new DID in issuer side.
-    const newIssuerDoc = new IotaDocument(networkHrp);
-    const vcString = credentialJwt.toString();
-    const previousSource = {
-      batchAddress: req.body.batchAddress,
-      batchDid: batchInDid,
-    };
-
-    newIssuerDoc.setPropertyUnchecked("vcString", vcString);
-
-    if (!newIssuerDoc.properties().get("previousSource")) {
-      newIssuerDoc.setPropertyUnchecked("previousSource", []);
-    }
-    newIssuerDoc.properties().get("previousSource").push(previousSource);
-    newIssuerDoc.setPropertyUnchecked("previousSource", [previousSource]);
-    newIssuerDoc.setPropertyUnchecked("type", "OrganicCertification");
-    newIssuerDoc.setPropertyUnchecked("batchAddress", req.body.batchAddress);
-    newIssuerDoc.setPropertyUnchecked("activity", [
+    const newDoc = new IotaDocument(networkHrp);
+    newDoc.setPropertyUnchecked("vcString", credentialJwt.toString());
+    newDoc.setPropertyUnchecked("type", "OrganicCertificationCredential");
+    newDoc.setPropertyUnchecked("issuedTo", queryParams);
+    newDoc.setPropertyUnchecked("activity", [
       {
-        message: `Organic certified to batch ${req.body.batchAddress}. Click on "View Credentials" button to view the certification details.`,
+        message: `Organic Certification issued to ${queryParams}.`,
         dateTime: new Date().toISOString(),
       },
     ]);
-    // Insert a new Ed25519 verification method in the DID document.
-    await newIssuerDoc.generateMethod(
+
+    // Insert a new Ed25519 verification method in the DID newDoc.
+    await newDoc.generateMethod(
       storage,
       JwkMemStore.ed25519KeyType(),
       JwsAlgorithm.EdDSA,
@@ -657,34 +695,16 @@ app.post("/api/v1/issueOrganicCertification", async (req, res) => {
     );
 
     const issuerAliasAddress = new AliasAddress(
-      IotaDID.fromJSON(req.body?.issuerDid).toAliasId()
+      IotaDID.fromJSON(req.body?.did).toAliasId()
     );
 
-    var aliasOutput = await didClient.newDidOutput(
-      issuerAliasAddress,
-      newIssuerDoc
-    );
-
-    const newControllerAliasAddress = new AliasAddress(
-      IotaDID.fromJSON(batchInDid).toAliasId()
-    );
-    // Update the state controller unlock condition
-    const updatedUnlockConditions = aliasOutput
-      .getUnlockConditions()
-      .map((uc) => {
-        if (uc.getType() === UnlockConditionType.StateControllerAddress) {
-          return new StateControllerAddressUnlockCondition(
-            newControllerAliasAddress
-          );
-        }
-        return uc;
-      });
+    var aliasOutput = await didClient.newDidOutput(issuerAliasAddress, newDoc);
 
     aliasOutput = await client.buildAliasOutput({
       ...aliasOutput,
       immutableFeatures: [new IssuerFeature(issuerAliasAddress)],
       aliasId: aliasOutput.getAliasId(),
-      unlockConditions: updatedUnlockConditions,
+      unlockConditions: aliasOutput.getUnlockConditions(),
     });
 
     // Adding the issuer feature means we have to recalculate the required storage deposit.
@@ -692,7 +712,7 @@ app.post("/api/v1/issueOrganicCertification", async (req, res) => {
       ...aliasOutput,
       amount: Utils.computeStorageDeposit(aliasOutput, rentStructure),
       aliasId: aliasOutput.getAliasId(),
-      unlockConditions: updatedUnlockConditions,
+      unlockConditions: aliasOutput.getUnlockConditions(),
     });
     // Publish the Alias Output and get the published DID document.
     const published = await didClient.publishDidOutput(
@@ -705,6 +725,7 @@ app.post("/api/v1/issueOrganicCertification", async (req, res) => {
       aliasOutput
     );
     console.log("Published DID document:", JSON.stringify(published, null, 2));
+    res.status(200).json(document);
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
