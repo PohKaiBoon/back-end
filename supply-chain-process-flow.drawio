@@ -608,7 +608,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="Copy of Copy of Page-6" id="WbOLdOQMD7YZgpNdxaRJ">
-    <mxGraphModel dx="1687" dy="1695" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="956" dy="1319" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="8Zr_rjJp-f5HoOpxem7t-0" />
         <mxCell id="8Zr_rjJp-f5HoOpxem7t-1" parent="8Zr_rjJp-f5HoOpxem7t-0" />
@@ -864,14 +864,14 @@
         <mxCell id="-WqXcQVINOI-AncXCRXI-56" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.775;entryY=0.996;entryDx=0;entryDy=0;entryPerimeter=0;" parent="8Zr_rjJp-f5HoOpxem7t-1" source="8Zr_rjJp-f5HoOpxem7t-9" target="-WqXcQVINOI-AncXCRXI-44" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="C1jq-by6BmyLmyDns8J3-6" value="&lt;b&gt;Gossip Protocol&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
-          <mxGeometry x="227" y="-140" width="120" height="30" as="geometry" />
+        <mxCell id="C1jq-by6BmyLmyDns8J3-6" value="&lt;b style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Gossip Protocol&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;(TCP Port 15600)&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
+          <mxGeometry x="225" y="-150" width="130" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="C1jq-by6BmyLmyDns8J3-7" value="&lt;b&gt;Gossip Protocol&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
-          <mxGeometry x="520" y="-140" width="120" height="30" as="geometry" />
+        <mxCell id="C1jq-by6BmyLmyDns8J3-10" value="&lt;b style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Gossip Protocol&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;(TCP Port 15600)&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
+          <mxGeometry x="510" y="-150" width="130" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="C1jq-by6BmyLmyDns8J3-9" value="&lt;b&gt;Gossip Protocol&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
-          <mxGeometry x="820" y="-140" width="120" height="30" as="geometry" />
+        <mxCell id="C1jq-by6BmyLmyDns8J3-11" value="&lt;b style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;Gossip Protocol&amp;nbsp;&lt;/font&gt;&lt;/b&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;b&gt;&lt;font style=&quot;font-size: 13px;&quot;&gt;(TCP Port 15600)&lt;/font&gt;&lt;/b&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="8Zr_rjJp-f5HoOpxem7t-1">
+          <mxGeometry x="820" y="-150" width="130" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
